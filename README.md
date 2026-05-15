@@ -53,7 +53,6 @@ curl -fsSL https://raw.githubusercontent.com/RiceC-at-MasonHS/pass-printer/main/
 6. Copy the [contents of the Apps Script](apps-script/on-form-submit.js) to the Sheet's Apps Script.
 7. Adjust any and all secrets in Apps Script to match requirements: 
     - `FLASK_SERVER_URL` The URL location for the cloudflare tunnel
-    - API Key for Flask server (to match value in step 4 above)
 8. Set the 'trigger' in the Apps Script to execute 'on Form Submit' and test that it works!
 
 
