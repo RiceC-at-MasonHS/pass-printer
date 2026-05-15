@@ -70,15 +70,22 @@ function printHallPass(firstName, lastName, isoTimestamp, reason, teacher, room,
   }
 }
 
+/*
+ * Retrieves the daily key from the "daily_key" sheet based on today's date.
+ * The sheet should have dates in column A and corresponding daily keys in column B.
+ * Returns the daily key if a match is found, or null if no match is found.
+ * ------
+ * Allows for unique daily attendance prefilled-URLs (daily_key as a query parameter).
+ * Prevent use of old links, guarding against students using links from previous days.
+ * Facilitates data aggregation into a single sheet for attendance tracking and reporting.
+ */
 function getDailyKey() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("daily_key"); // Ensure this matches the name of your sheet
   const data = sheet.getDataRange().getValues();
   
   // Create search date and strip time to 00:00:00
-  // Today's date example:
-  const searchDate = new Date(); 
-  searchDate.setHours(0, 0, 0, 0);
+  // Create 'Today' search date and strip time to 00:00:00
   const searchTime = searchDate.getTime();
 
   const returnColumnIndex = 1; // Column B: holds the daily key value
@@ -94,7 +101,7 @@ function getDailyKey() {
       if (rowValue.getTime() === searchTime) {
         let dailyKey = data[i][returnColumnIndex];
         Logger.log("Date: " +searchDate+ "| key: "+ dailyKey);
-        return dailyKey;
+        Logger.log("Date: " +searchDate+ "| key: "+ dailyKey);
       }
     }
   }
