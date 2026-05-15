@@ -39,6 +39,7 @@ To ensure the system is reachable by Google Services while remaining secure behi
 
 * **Host Address:** `REDACTED-URL` with access guarded by authorization.   
 * **Access Control:** Secure non-root user accounts and private keys are utilized for server management.
+* **Daily Key:** With a prefilled `daily_key` value for the form: everyday has a unique URL, preventing students from saving and reusing a single link. Passes don't print without today's correct key.
 
 ## **Implementation Team**
 
