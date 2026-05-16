@@ -1,18 +1,20 @@
-var FLASK_SERVER_URL   = "https://pass-printer-test.comet-tech.org/print";  // replace with your Pi's IP
-var SCHOOL_NAME        = "Mason High School";
-var PRINT_PASSKEY      = "your-super-secret-passkey-here";  // Must match the passkey set in the Flask server
+var FLASK_SERVER_URL = "SECRET_PRINT_SERVER_URL"; // read CONFIG.md
+var PRINT_PASSKEY    = "SECRET_PRINT_PASSKEY";    // read CONFIG.md
 
 function onFormSubmit(e) {
   try {
+    // Get Form responses from the event object
     var responses = e.values;
     Logger.log("Google Form responses: " + JSON.stringify(responses));
 
+    // Map responses to variables (adjust indices based on your form structure)
     var firstName    = responses[1].trim();
     var lastName     = responses[2].trim();
     var studentName  = firstName + " " + lastName;
     var studentId    = responses[3].trim();
     var reason       = responses[5].trim();
 
+    // Generate timestamps for the hall pass
     var now         = new Date();
     var arrivalTime = Utilities.formatDate(now, Session.getScriptTimeZone(), "h:mm a");
     var arrivalDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "EEEE, MMMM d, yyyy");
@@ -30,7 +32,9 @@ function onFormSubmit(e) {
       return
     }
     
+    //-------------------------------------------------------------------------
     printHallPass(firstName, lastName, isoTimestamp, studentId, reason);
+    // TODO: email teacher OR create 'late arrival' Smartpass directly (if Smartpass supports it)
 
     Logger.log("Late arrival processed: " + studentName);
 
@@ -39,6 +43,15 @@ function onFormSubmit(e) {
   }
 }
 
+/*
+ * Sends a request to the print server with the student's information and reason for lateness.
+ * The print server will handle the actual printing of the hall pass, and getting more data.
+ * ------
+ * Ensures the print server receives all necessary information to generate a hall pass, including:
+ * --> student name, student ID, reason for lateness, and timestamp.
+ * Uses a secret passkey for authentication to prevent unauthorized printing requests.
+ * Logs the response from the print server for debugging and monitoring purposes.
+ */
 function printHallPass(firstName, lastName, isoTimestamp, studentId, reason) {
   var payload = {
     first_name : firstName,
