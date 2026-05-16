@@ -3,12 +3,26 @@ from escpos.printer import Usb
 import datetime
 from functools import wraps
 import pytz
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
+# ── Configuration ─────────────────────────────────────────────
+SCHOOL_NAME_LINE_1 = os.getenv("SCHOOL_NAME_LINE_1", "MASON HIGH")
+SCHOOL_NAME_LINE_2 = os.getenv("SCHOOL_NAME_LINE_2", "SCHOOL")
+SERVICE_NAME = os.getenv("SERVICE_NAME", "Mason HS Hall Pass Server")
+TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
+SCHOOL_START_HOUR = int(os.getenv("SCHOOL_START_HOUR", "7"))
+SCHOOL_START_MINUTE = int(os.getenv("SCHOOL_START_MINUTE", "30"))
+SCHOOL_END_HOUR = int(os.getenv("SCHOOL_END_HOUR", "14"))
+SCHOOL_END_MINUTE = int(os.getenv("SCHOOL_END_MINUTE", "30"))
+
 # ── Printer ───────────────────────────────────────────────────
-VENDOR_ID  = 0x0483
-PRODUCT_ID = 0x5743
+VENDOR_ID  = int(os.getenv("PRINTER_VENDOR_ID", "0x0483"), 16)
+PRODUCT_ID = int(os.getenv("PRINTER_PRODUCT_ID", "0x5743"), 16)
 
 def get_printer():
     try:
@@ -29,13 +43,14 @@ def school_hours_only(f):
     """
     Decorator that restricts endpoint access to school hours:
     - Monday through Friday only
-    - 7:30 AM to 2:30 PM Ohio local time (US/Eastern)
+    - Time range configured via environment variables (default: 7:30 AM to 2:30 PM)
+    - Timezone configured via environment variables (default: US/Eastern)
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Get current time in Ohio timezone
-        ohio_tz = pytz.timezone('US/Eastern')
-        now = datetime.datetime.now(ohio_tz)
+        # Get current time in configured timezone
+        tz = pytz.timezone(TIMEZONE)
+        now = datetime.datetime.now(tz)
         
         # Check if it's a weekday (0=Monday, 4=Friday, 5=Saturday, 6=Sunday)
         if now.weekday() >= 5:
@@ -44,13 +59,15 @@ def school_hours_only(f):
                 "current_time": now.strftime("%A %I:%M %p %Z")
             }), 403
         
-        # Check if time is within 7:30 AM to 2:30 PM
-        school_start = now.replace(hour=7, minute=30, second=0, microsecond=0)
-        school_end = now.replace(hour=14, minute=30, second=0, microsecond=0)
+        # Check if time is within configured school hours
+        school_start = now.replace(hour=SCHOOL_START_HOUR, minute=SCHOOL_START_MINUTE, second=0, microsecond=0)
+        school_end = now.replace(hour=SCHOOL_END_HOUR, minute=SCHOOL_END_MINUTE, second=0, microsecond=0)
         
         if now < school_start or now > school_end:
+            start_str = f"{SCHOOL_START_HOUR}:{SCHOOL_START_MINUTE:02d} AM"
+            end_str = f"{SCHOOL_END_HOUR if SCHOOL_END_HOUR <= 12 else SCHOOL_END_HOUR - 12}:{SCHOOL_END_MINUTE:02d} PM"
             return jsonify({
-                "error": "Printing only allowed between 7:30 AM and 2:30 PM Ohio time",
+                "error": f"Printing only allowed between {start_str} and {end_str} {TIMEZONE}",
                 "current_time": now.strftime("%A %I:%M %p %Z")
             }), 403
         
@@ -60,7 +77,7 @@ def school_hours_only(f):
 
 
 def health():
-    return jsonify({"status": "ok", "service": "Mason HS Hall Pass Server"}), 200
+    return jsonify({"status": "ok", "service": SERVICE_NAME}), 200
 
 @app.route("/print", methods=["POST"])
 @school_hours_only
@@ -83,22 +100,22 @@ def print_pass():
 
         # ── Header ──────────────────────────────────────
         p.set(align="center", bold=True, double_height=True, double_width=True)
-        p.text("MASON HIGH\n")
-        p.text("SCHOOL\n")
+        p.text(f"{SCHOOL_NAME_LINE_1}\n")
+        p.text(f"{SCHOOL_NAME_LINE_2}\n")
 
         p.set(align="center", bold=True, double_height=False, double_width=False)
         p.text("OFFICIAL HALL PASS\n")
-        p.text("=" * 42 + "\n")
+        p.text("=" * 24 + "\n")
 
         # ── Student ─────────────────────────────────────
         p.set(align="left", bold=True, double_height=True, double_width=False)
         p.text(f"{first} {last}\n")
 
         p.set(align="left", bold=False, double_height=False)
-        p.text("-" * 42 + "\n")
-        p.text(f"Time Out : {timestamp}\n")
+        p.text("-" * 47 + "\n")
+        p.text(f"Sign In  : {timestamp}\n")
         p.text(f"Reason   : {reason}\n")
-        p.text("-" * 42 + "\n")
+        p.text("-" * 47 + "\n")
 
         # ── Destination ─────────────────────────────────
         p.set(bold=True)
@@ -107,10 +124,10 @@ def print_pass():
         p.text(f"Teacher  : {teacher}\n")
 
         # ── Footer ──────────────────────────────────────
-        p.text("=" * 42 + "\n")
+        p.text("=" * 47 + "\n")
         p.set(align="center")
         p.text("Proceed directly to class.\n")
-        p.text("Keep this pass until dismissed.\n\n")
+        p.text("Hand this pass to the teacher.")
 
         p.cut()
         p.close()
@@ -122,5 +139,8 @@ def print_pass():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    host = os.getenv("SERVER_HOST", "0.0.0.0")
+    port = int(os.getenv("SERVER_PORT", "5000"))
+    debug = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+    app.run(host=host, port=port, debug=debug)
 
