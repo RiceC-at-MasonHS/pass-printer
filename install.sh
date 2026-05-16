@@ -66,6 +66,22 @@ else
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
+# Verify repository structure
+if [[ ! -d "$INSTALL_DIR/print-server" ]]; then
+    log_error "Repository structure invalid: print-server directory not found"
+    log_error "Expected: $INSTALL_DIR/print-server"
+    log_error "Please verify the repository was cloned correctly"
+    exit 1
+fi
+
+if [[ ! -f "$INSTALL_DIR/print-server/requirements.txt" ]]; then
+    log_error "Missing requirements.txt: $INSTALL_DIR/print-server/requirements.txt"
+    log_error "Repository may be incomplete or corrupted"
+    exit 1
+fi
+
+log_info "Repository structure verified"
+
 log_section "Setting up service user..."
 
 if id "$SERVICE_USER" &>/dev/null; then
