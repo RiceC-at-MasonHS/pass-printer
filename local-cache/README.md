@@ -1,17 +1,48 @@
-# Local Attendance Cache
+# Smartpass Schedule Scraper
 
-Having a local cache of attendance data helps make printed passes more data-full. 
+Side-car utility for `pass-printer`. Automates student schedule extraction from Smartpass.
 
-Data in the local cache can be:
-- updated nightly (suggesting 3:30AM)
-- stored encrypted, to secure data
-- minimize traffic to the primary SIS
-- minimize exposure of student records on pass-printer device
-- normalized and stored in a SQLite or Redis database
-- formatted as needed for the pass-printer:
-    - Student-facing `student_id` numbers
-    - Daily schedule (bells, times, classes, teachers, teacher_email)
-    - Student schedules
-    - Basic tardy records: count of tardies to each class
+## Installation
 
-It would also be good to update this cache on a regular schedule, but be able to 'force' an update when the schedule changes to a 2-hour delay or some other late-breaking nonstandard schedule. 
+1. **Prerequisites**: Python 3.x, Debian/Ubuntu server.
+2. **Run Installer**:
+   ```bash
+   chmod +x install.sh
+   sudo ./install.sh
+   ```
+3. **Configure**:
+   Edit `/opt/schedule-scraper/.env`:
+   ```env
+   CLEVER_USERNAME=your_username
+   CLEVER_PASSWORD=your_password
+   SCHOOL_ID=2844
+   SCRAPER_MODE=dev  # 'dev' for 5 students, 'prod' for full school
+   ```
+
+## Architecture
+
+- **Path**: `/opt/schedule-scraper`
+- **Database**: `/opt/pass-printer/data.db` (Shared)
+- **Service**: `schedule-scraper.service`
+- **Timer**: `schedule-scraper.timer` (Runs daily at 3:00 AM)
+
+## Components
+
+- `smartpass_scraper.py`: Main logic for data extraction.
+- `auth_clever.py`: Automated headless login via Playwright.
+- `SCHEMA.md`: Database documentation for integration.
+
+## Manual Triggers
+
+### 1. Command Line (Recommended)
+Trigger a sync via systemd:
+```bash
+sudo systemctl start schedule-scraper.service
+```
+
+### 2. Local Web API (Delayed Starts)
+A local API runs on port `48273` for manual triggers (e.g., via a local script or curl on the server):
+- **Trigger Sync**: `curl -X POST http://127.0.0.1:48273/sync`
+- **Check Status**: `curl http://127.0.0.1:48273/stats`
+
+*Note: The API is bound to 127.0.0.1 and is not reachable from the network.*
