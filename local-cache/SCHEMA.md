@@ -36,7 +36,7 @@ The following queries use a specific time (e.g., `'09:30'`) to find the student'
 ### 1. Get current class, room, and teacher
 Find where a student is supposed to be right now.
 ```sql
-SELECT class_name, room, teacher_name
+SELECT class_name, room, teacher_name, end_time
 FROM schedules
 WHERE student_id = ? AND start_time <= '09:30' AND end_time >= '09:30'
 ORDER BY start_time DESC
@@ -46,7 +46,7 @@ LIMIT 1;
 ### 2. Get destination (Fuzzy/Passing Period handling)
 If a student arrives during passing time (e.g., `'08:33'`), the strict `start_time <= T AND end_time >= T` might return nothing. Use this to find the *next* or *current* destination.
 ```sql
-SELECT class_name, room, teacher_name, teacher_email, start_time
+SELECT class_name, room, teacher_name, end_time
 FROM schedules
 WHERE student_id = ? AND end_time >= '08:33'
 ORDER BY start_time ASC
