@@ -135,18 +135,27 @@ class PrintQueue:
         reason = job.data.get("late_reason", "")
         custom_id = job.data.get("student_id", "")
         
-        # Extract schedule data from local-cache
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT class_name, period_number, room, teacher_name, end_time FROM schedule WHERE student_id = ?", (custom_id,))
-        dest = cursor.fetchone()
-        conn.close()    
-
-        class_name = dest.get("class_name", "unknown")
-        period_number = dest.get("period_number", "unknown")
-        room = dest.get("room", dest.get("location", "unknown"))
-        teacher_name = dest.get("teacher_name", dest.get("teacher", "unknown"))
-        end_time = dest.get("end_time", "unknown")
+        # Extract schedule data from local-cache (with graceful fallback)
+        class_name = "unknown"
+        period_number = "unknown"
+        room = "unknown"
+        teacher_name = "unknown"
+        end_time = "unknown"
+        
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT class_name, period_number, room, teacher_name, end_time FROM schedules WHERE student_id = ? LIMIT 1",
+                (custom_id,)
+            )
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                class_name, period_number, room, teacher_name, end_time = result
+        except Exception as e:
+            print(f"Warning: Could not fetch schedule data for student {custom_id}: {e}")
 
         # ── Header ──────────────────────────────────────
         printer.set(align="center", bold=True, double_height=True, double_width=True)
