@@ -5,10 +5,12 @@ import datetime
 import pytz
 from functools import wraps
 
-from config import SERVER_HOST, SERVER_PORT, DEBUG, SERVICE_NAME, TIMEZONE, SCHOOL_START_HOUR, SCHOOL_START_MINUTE, SCHOOL_END_HOUR, SCHOOL_END_MINUTE
+from config import SERVER_HOST, SERVER_PORT, DEBUG, PRINT_PASSKEY, SERVICE_NAME, TIMEZONE, SCHOOL_START_HOUR, SCHOOL_START_MINUTE, SCHOOL_END_HOUR, SCHOOL_END_MINUTE
 from print_queue import submit_print_job, get_print_job_status, get_print_queue_summary
 
 app = Flask(__name__)
+
+# ── Decorators ───────────────────────────────────────────────
 
 def school_hours_only(f):
     """
@@ -41,18 +43,43 @@ def school_hours_only(f):
                 "error": f"Printing only allowed between {start_str} and {end_str} {TIMEZONE}",
                 "current_time": now.strftime("%A %I:%M %p %Z")
             }), 403
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+def require_passkey(f):
+    """
+    Decorator that requires a valid passkey in the Authorization header.
+    Format: Authorization: Bearer <passkey>
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not PRINT_PASSKEY:
+            return jsonify({"error": "Print passkey not configured on server"}), 500
+        
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+        
+        provided_passkey = auth_header[7:]  # Strip "Bearer " prefix
+        if provided_passkey != PRINT_PASSKEY:
+            return jsonify({"error": "Invalid passkey"}), 401
         
         return f(*args, **kwargs)
     
     return decorated_function
 
+# ── API Endpoints ───────────────────────────────────────────────
 
+@app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": SERVICE_NAME}), 200
 
 
 @app.route("/print", methods=["POST"])
 @school_hours_only
+@require_passkey
 def print_pass():
     """Submit a print job to the queue."""
     data = request.get_json(silent=True)

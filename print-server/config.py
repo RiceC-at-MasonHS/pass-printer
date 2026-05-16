@@ -13,6 +13,9 @@ PRINTER_PRODUCT_ID = int(os.getenv("PRINTER_PRODUCT_ID", "0x5743"), 16)
 PRINT_MAX_RETRIES = int(os.getenv("PRINT_MAX_RETRIES", "5"))
 PRINT_RETRY_DELAY = int(os.getenv("PRINT_RETRY_DELAY", "5"))  # seconds
 
+# ── Security Configuration ──────────────────────────────────
+PRINT_PASSKEY = os.getenv("PRINT_PASSKEY", "")
+
 # ── Server Configuration ───────────────────────────────────────
 SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("SERVER_PORT", "5000"))
