@@ -22,6 +22,19 @@ The system follows a linear data path from student input to physical output:
 4. **Processing:** A Python/Flask server running on a Raspberry Pi receives the data.  
 5. **Output:** The server communicates with a POS (Point of Sale) printer to generate a physical receipt/artifact for the student to carry to class.
 
+
+## **Local Cache / Schedule Scraper**
+
+The `local-cache` component is a sidecar utility that automatically extracts and maintains an up-to-date cache of student schedules from Smartpass. This data is critical for the attendance system to function effectively.
+
+**Key Features:**
+- **Automated Extraction:** Runs daily (via systemd timer) to pull the latest student schedules from Smartpass using headless browser automation
+- **Local Storage:** Caches schedule data in a shared SQLite database (`/opt/pass-printer/data.db`)
+- **Manual Triggers:** Provides a local web API on for on-demand schedule syncing
+- **Robust Authentication:** Uses the `auth_clever.py` module for secure, headless login via Playwright
+
+This component ensures that the print-server always has access to current (today's) student information and schedules without requiring real-time lookups to external systems.
+
 ## **Technical Stack**
 
 | Component | Technology Used | Purpose |
@@ -29,6 +42,7 @@ The system follows a linear data path from student input to physical output:
 | **Front End** | Google Forms | User input and data collection |
 | **Middle Tier** | Google Apps Script | Event listener and API relay |
 | **Server** | Python / Flask | Application logic and printer management |
+| **Local Cache** | Python / Playwright | Automated student schedule extraction from Smartpass |
 | **Hardware** | Raspberry Pi | Local host for the server and printer connection |
 | **Networking** | Cloudflare Tunnel | Securely exposing the local server to the internet |
 | **Output** | POS Thermal Printer | Creating the physical attendance artifact |
@@ -40,6 +54,22 @@ To ensure the system is reachable by Google Services while remaining secure behi
 * **Host Address:** `REDACTED-URL` with access guarded by authorization.   
 * **Access Control:** Secure non-root user accounts and private keys are utilized for server management.
 * **Daily Key:** With a prefilled `daily_key` value for the form: everyday has a unique URL, preventing students from saving and reusing a single link. Passes don't print without today's correct key.
+
+## **Installation Procedure**
+
+1. Obtain a POS printer and Raspberry Pi with Headless Raspbian or Debian. 
+2. Configure the Raspberry Pi for the network, and attach the printer via USB.
+3. On the Raspberry Pi (either terminal/SSH *or* local monitor, keyboard, mouse) run the following command:
+```shell
+curl -fsSL https://raw.githubusercontent.com/RiceC-at-MasonHS/pass-printer/main/install.sh | sudo bash
+```
+4. Set a kryptonite-level API key for the Flask server, following [these instructions](print-server/README.md). Update as needed.
+5. Create a Google Form for attendance that meets [an exacting set of requirements](/apps-script/README.md).
+6. Copy the [contents of the Apps Script](apps-script/on-form-submit.js) to the Sheet's Apps Script.
+7. Adjust any and all secrets in Apps Script to match requirements: 
+    - `FLASK_SERVER_URL` The URL location for the cloudflare tunnel
+8. Set the 'trigger' in the Apps Script to execute 'on Form Submit' and test that it works!
+
 
 ## **Implementation Team**
 

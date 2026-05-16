@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# SQLite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Scraper artifacts
+smartpass_export.csv
+tool-outputs/
+
+# OS
+.DS_Store
