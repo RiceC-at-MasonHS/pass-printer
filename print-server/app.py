@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from escpos.printer import Usb
 import datetime
+from functools import wraps
+import pytz
 
 app = Flask(__name__)
 
@@ -23,11 +25,45 @@ def format_timestamp(ts):
     except:
         return ts
 
-@app.route("/", methods=["GET"])
+def school_hours_only(f):
+    """
+    Decorator that restricts endpoint access to school hours:
+    - Monday through Friday only
+    - 7:30 AM to 2:30 PM Ohio local time (US/Eastern)
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get current time in Ohio timezone
+        ohio_tz = pytz.timezone('US/Eastern')
+        now = datetime.datetime.now(ohio_tz)
+        
+        # Check if it's a weekday (0=Monday, 4=Friday, 5=Saturday, 6=Sunday)
+        if now.weekday() >= 5:
+            return jsonify({
+                "error": "Printing disabled on weekends",
+                "current_time": now.strftime("%A %I:%M %p %Z")
+            }), 403
+        
+        # Check if time is within 7:30 AM to 2:30 PM
+        school_start = now.replace(hour=7, minute=30, second=0, microsecond=0)
+        school_end = now.replace(hour=14, minute=30, second=0, microsecond=0)
+        
+        if now < school_start or now > school_end:
+            return jsonify({
+                "error": "Printing only allowed between 7:30 AM and 2:30 PM Ohio time",
+                "current_time": now.strftime("%A %I:%M %p %Z")
+            }), 403
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+
 def health():
     return jsonify({"status": "ok", "service": "Mason HS Hall Pass Server"}), 200
 
 @app.route("/print", methods=["POST"])
+@school_hours_only
 def print_pass():
     data = request.get_json(silent=True)
     if not data:
