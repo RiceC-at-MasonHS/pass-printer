@@ -1,43 +1,14 @@
-from flask import Flask, request, jsonify
-from escpos.printer import Usb
-import datetime
-from functools import wraps
-import pytz
-import os
-from dotenv import load_dotenv
+"""Flask application for the print server."""
 
-load_dotenv()
+from flask import Flask, jsonify, request
+import datetime
+import pytz
+from functools import wraps
+
+from config import SERVER_HOST, SERVER_PORT, DEBUG, SERVICE_NAME, TIMEZONE, SCHOOL_START_HOUR, SCHOOL_START_MINUTE, SCHOOL_END_HOUR, SCHOOL_END_MINUTE
+from print_queue import submit_print_job, get_print_job_status, get_print_queue_summary
 
 app = Flask(__name__)
-
-# ── Configuration ─────────────────────────────────────────────
-SCHOOL_NAME_LINE_1 = os.getenv("SCHOOL_NAME_LINE_1", "MASON HIGH")
-SCHOOL_NAME_LINE_2 = os.getenv("SCHOOL_NAME_LINE_2", "SCHOOL")
-SERVICE_NAME = os.getenv("SERVICE_NAME", "Mason HS Hall Pass Server")
-TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
-SCHOOL_START_HOUR = int(os.getenv("SCHOOL_START_HOUR", "7"))
-SCHOOL_START_MINUTE = int(os.getenv("SCHOOL_START_MINUTE", "30"))
-SCHOOL_END_HOUR = int(os.getenv("SCHOOL_END_HOUR", "14"))
-SCHOOL_END_MINUTE = int(os.getenv("SCHOOL_END_MINUTE", "30"))
-
-# ── Printer ───────────────────────────────────────────────────
-VENDOR_ID  = int(os.getenv("PRINTER_VENDOR_ID", "0x0483"), 16)
-PRODUCT_ID = int(os.getenv("PRINTER_PRODUCT_ID", "0x5743"), 16)
-
-def get_printer():
-    try:
-        return Usb(VENDOR_ID, PRODUCT_ID)
-    except Exception as e:
-        print(f"Printer connection error: {e}")
-        return None
-
-def format_timestamp(ts):
-    try:
-        dt = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        local = dt.astimezone()
-        return local.strftime("%B %d, %Y  %I:%M %p")
-    except:
-        return ts
 
 def school_hours_only(f):
     """
@@ -79,68 +50,45 @@ def school_hours_only(f):
 def health():
     return jsonify({"status": "ok", "service": SERVICE_NAME}), 200
 
+
 @app.route("/print", methods=["POST"])
 @school_hours_only
 def print_pass():
+    """Submit a print job to the queue."""
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No JSON body"}), 400
 
-    p = get_printer()
-    if not p:
-        return jsonify({"error": "Printer not found"}), 500
+    # Submit job to queue
+    job = submit_print_job(data)
+    
+    print(f"→ Queued: {data.get('first_name', '')} {data.get('last_name', '')} (Job {job.job_id})")
+    
+    return jsonify({
+        "status": "queued",
+        "job_id": job.job_id,
+        "message": f"Pass queued for printing. Check status with /status/{job.job_id}"
+    }), 202
 
-    try:
-        first     = data.get("first_name", "")
-        last      = data.get("last_name", "")
-        timestamp = format_timestamp(data.get("timestamp", ""))
-        reason    = data.get("late_reason", "")
-        dest      = data.get("heading_to", {})
-        teacher   = dest.get("teacher", "")
 
-        # ── Header ──────────────────────────────────────
-        p.set(align="center", bold=True, double_height=True, double_width=True)
-        p.text(f"{SCHOOL_NAME_LINE_1}\n")
-        p.text(f"{SCHOOL_NAME_LINE_2}\n")
+@app.route("/status/<job_id>", methods=["GET"])
+def check_status(job_id):
+    """Check the status of a print job."""
+    job = get_print_job_status(job_id)
+    
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    
+    return jsonify(job.to_dict()), 200
 
-        p.set(align="center", bold=True, double_height=False, double_width=False)
-        p.text("OFFICIAL HALL PASS\n")
-        p.text("=" * 24 + "\n")
 
-        # ── Student ─────────────────────────────────────
-        p.set(align="left", bold=True, double_height=True, double_width=False)
-        p.text(f"{first} {last}\n")
+@app.route("/queue", methods=["GET"])
+def get_queue_status():
+    """Get overall queue status and job summary."""
+    summary = get_print_queue_summary()
+    return jsonify(summary), 200
 
-        p.set(align="left", bold=False, double_height=False)
-        p.text("-" * 47 + "\n")
-        p.text(f"Sign In  : {timestamp}\n")
-        p.text(f"Reason   : {reason}\n")
-        p.text("-" * 47 + "\n")
-
-        # ── Destination ─────────────────────────────────
-        p.set(bold=True)
-        p.text("DESTINATION\n")
-        p.set(bold=False)
-        p.text(f"Teacher  : {teacher}\n")
-
-        # ── Footer ──────────────────────────────────────
-        p.text("=" * 47 + "\n")
-        p.set(align="center")
-        p.text("Proceed directly to class.\n")
-        p.text("Hand this pass to the teacher.")
-
-        p.cut()
-        p.close()
-
-        return jsonify({"status": "ok", "message": f"Pass printed for {first} {last}"}), 200
-
-    except Exception as e:
-        print(f"Print error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    host = os.getenv("SERVER_HOST", "0.0.0.0")
-    port = int(os.getenv("SERVER_PORT", "5000"))
-    debug = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
-    app.run(host=host, port=port, debug=debug)
+    app.run(host=SERVER_HOST, port=SERVER_PORT, debug=DEBUG)
 
