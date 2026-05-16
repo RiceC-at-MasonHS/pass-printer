@@ -5,10 +5,10 @@ import threading
 import queue
 import time
 import uuid
+import sqlite3
 from escpos.printer import Usb
 
-from config import PRINTER_VENDOR_ID, PRINTER_PRODUCT_ID, PRINT_MAX_RETRIES
-
+from config import PRINTER_VENDOR_ID, PRINTER_PRODUCT_ID, PRINT_MAX_RETRIES, SCHOOL_NAME_LINE_1, SCHOOL_NAME_LINE_2, DB_NAME
 
 class PrintJob:
     """Encapsulates a print job with metadata."""
@@ -133,39 +133,56 @@ class PrintQueue:
         last = job.data.get("last_name", "")
         timestamp = self._format_timestamp(job.data.get("timestamp", ""))
         reason = job.data.get("late_reason", "")
-        dest = job.data.get("heading_to", {})
-        teacher = dest.get("teacher", "")
+        custom_id = job.data.get("student_id", "")
+        
+        # Extract schedule data from local-cache
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT class_name, period_number, room, teacher_name, end_time FROM schedule WHERE student_id = ?", (custom_id,))
+        dest = cursor.fetchone()
+        conn.close()    
+
+        class_name = dest.get("class_name", "unknown")
+        period_number = dest.get("period_number", "unknown")
+        room = dest.get("room", dest.get("location", "unknown"))
+        teacher_name = dest.get("teacher_name", dest.get("teacher", "unknown"))
+        end_time = dest.get("end_time", "unknown")
 
         # ── Header ──────────────────────────────────────
         printer.set(align="center", bold=True, double_height=True, double_width=True)
-        printer.text("MASON HIGH\n")
-        printer.text("SCHOOL\n")
+        printer.text(f"{SCHOOL_NAME_LINE_1}\n")
+        printer.text(f"{SCHOOL_NAME_LINE_2}\n")
 
         printer.set(align="center", bold=True, double_height=False, double_width=False)
-        printer.text("OFFICIAL HALL PASS\n")
-        printer.text("=" * 42 + "\n")
+        printer.text("LATE ARRIVAL PASS\n")
+        printer.text("=" * 24 + "\n")
 
         # ── Student ─────────────────────────────────────
         printer.set(align="left", bold=True, double_height=True, double_width=False)
         printer.text(f"{first} {last}\n")
 
         printer.set(align="left", bold=False, double_height=False)
-        printer.text("-" * 42 + "\n")
-        printer.text(f"Time Out : {timestamp}\n")
-        printer.text(f"Reason   : {reason}\n")
-        printer.text("-" * 42 + "\n")
+        printer.text("-" * 47 + "\n")
+        printer.text(f"Time In: {timestamp}\n")
+        printer.text(f"Reason : {reason}\n")
+        printer.text("-" * 47 + "\n")
 
-        # ── Destination ─────────────────────────────────
+        # ── Current Class Schedule (from local-cache) ──────
         printer.set(bold=True)
-        printer.text("DESTINATION\n")
+        printer.text("SHOULD BE IN\n")
         printer.set(bold=False)
-        printer.text(f"Teacher  : {teacher}\n")
+        printer.text(f"Period : {period_number}\n")
+        printer.text(f"Class  : {class_name}\n")
+        printer.text(f"Room   : {room}\n")
+        printer.text(f"Teacher: {teacher_name}\n")
+        if end_time:
+            printer.text(f"Until  : {end_time}\n")
 
         # ── Footer ──────────────────────────────────────
-        printer.text("=" * 42 + "\n")
+        printer.text("=" * 47 + "\n")
         printer.set(align="center")
         printer.text("Proceed directly to class.\n")
-        printer.text("Keep this pass until dismissed.\n\n")
+        printer.text("Hand this pass to your teacher.\n\n")
 
         printer.cut()
         printer.close()

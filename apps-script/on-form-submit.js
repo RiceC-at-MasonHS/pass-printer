@@ -30,7 +30,7 @@ function onFormSubmit(e) {
       return
     }
     
-    printHallPass(firstName, lastName, isoTimestamp, reason, "prototype", "prototype", "unknown", "unknown","unknown");
+    printHallPass(firstName, lastName, isoTimestamp, studentId, reason);
 
     Logger.log("Late arrival processed: " + studentName);
 
@@ -39,21 +39,13 @@ function onFormSubmit(e) {
   }
 }
 
-function printHallPass(firstName, lastName, isoTimestamp, reason, teacher, room, period, lateThisBell, lateOverall) {
+function printHallPass(firstName, lastName, isoTimestamp, studentId, reason) {
   var payload = {
     first_name : firstName,
     last_name  : lastName,
     timestamp  : isoTimestamp,
     late_reason: reason,
-    heading_to : {
-      teacher  : teacher,
-      room     : room,
-      class    : "Bell " + period
-    }, 
-    late_count : {
-      this_bell: lateThisBell,
-      overall  : lateOverall
-    }
+    student_id : studentId
   };
 
   var options = {
