@@ -22,6 +22,18 @@ The system follows a linear data path from student input to physical output:
 4. **Processing:** A Python/Flask server running on a Raspberry Pi receives the data.  
 5. **Output:** The server communicates with a POS (Point of Sale) printer to generate a physical receipt/artifact for the student to carry to class.
 
+## **Local Cache / Schedule Scraper**
+
+The `local-cache` component is a sidecar utility that automatically extracts and maintains an up-to-date cache of student schedules from Smartpass. This data is critical for the attendance system to function effectively.
+
+**Key Features:**
+- **Automated Extraction:** Runs daily (via systemd timer) to pull the latest student schedules from Smartpass using headless browser automation
+- **Local Storage:** Caches schedule data in a shared SQLite database (`/opt/pass-printer/data.db`)
+- **Manual Triggers:** Provides a local web API on for on-demand schedule syncing
+- **Robust Authentication:** Uses the `auth_clever.py` module for secure, headless login via Playwright
+
+This component ensures that the print-server always has access to current (today's) student information and schedules without requiring real-time lookups to external systems.
+
 ## **Technical Stack**
 
 | Component | Technology Used | Purpose |
@@ -29,6 +41,7 @@ The system follows a linear data path from student input to physical output:
 | **Front End** | Google Forms | User input and data collection |
 | **Middle Tier** | Google Apps Script | Event listener and API relay |
 | **Server** | Python / Flask | Application logic and printer management |
+| **Local Cache** | Python / Playwright | Automated student schedule extraction from Smartpass |
 | **Hardware** | Raspberry Pi | Local host for the server and printer connection |
 | **Networking** | Cloudflare Tunnel | Securely exposing the local server to the internet |
 | **Output** | POS Thermal Printer | Creating the physical attendance artifact |
