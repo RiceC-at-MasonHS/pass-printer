@@ -1,12 +1,20 @@
 from flask import Flask, request, jsonify
 from escpos.printer import Usb
 import datetime
+from functools import wraps
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
+# ── Configuration ─────────────────────────────────────────────
+PRINT_PASSKEY = os.getenv("PRINT_PASSKEY", "")
+
 # ── Printer ───────────────────────────────────────────────────
-VENDOR_ID  = 0x0483
-PRODUCT_ID = 0x5743
+VENDOR_ID  = int(os.getenv("PRINTER_VENDOR_ID", "0x0483"), 16)
+PRODUCT_ID = int(os.getenv("PRINTER_PRODUCT_ID", "0x5743"), 16)
 
 def get_printer():
     try:
@@ -23,11 +31,34 @@ def format_timestamp(ts):
     except:
         return ts
 
+def require_passkey(f):
+    """
+    Decorator that requires a valid passkey in the Authorization header.
+    Format: Authorization: Bearer <passkey>
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not PRINT_PASSKEY:
+            return jsonify({"error": "Print passkey not configured on server"}), 500
+        
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+        
+        provided_passkey = auth_header[7:]  # Strip "Bearer " prefix
+        if provided_passkey != PRINT_PASSKEY:
+            return jsonify({"error": "Invalid passkey"}), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "Mason HS Hall Pass Server"}), 200
 
 @app.route("/print", methods=["POST"])
+@require_passkey
 def print_pass():
     data = request.get_json(silent=True)
     if not data:
