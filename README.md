@@ -22,6 +22,7 @@ The system follows a linear data path from student input to physical output:
 4. **Processing:** A Python/Flask server running on a Raspberry Pi receives the data.  
 5. **Output:** The server communicates with a POS (Point of Sale) printer to generate a physical receipt/artifact for the student to carry to class.
 
+
 ## **Local Cache / Schedule Scraper**
 
 The `local-cache` component is a sidecar utility that automatically extracts and maintains an up-to-date cache of student schedules from Smartpass. This data is critical for the attendance system to function effectively.
