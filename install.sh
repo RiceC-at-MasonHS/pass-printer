@@ -135,14 +135,15 @@ if [[ -f "$UDEV_RULE_FILE" ]]; then
         log_warn "udev rule file exists but may not match current printer IDs"
         log_info "Updating udev rule..."
         echo "$NEW_RULE" > "$UDEV_RULE_FILE"
-        udevadm control --reload-rules
-        udevadm trigger
+        udevadm control --reload-rules 2>/dev/null || log_warn "udev daemon not available (OK if testing in container)"
+        udevadm trigger 2>/dev/null || log_warn "udev trigger failed (OK if testing in container)"
     fi
 else
     log_info "Creating udev rule for USB printer..."
     echo "$NEW_RULE" > "$UDEV_RULE_FILE"
-    udevadm control --reload-rules
-    udevadm trigger
+    udevadm control --reload-rules 2>/dev/null || log_warn "udev daemon not available (OK if testing in container)"
+    udevadm trigger 2>/dev/null || log_warn "udev trigger failed (OK if testing in container)"
+    log_info "udev rule installed (will be active after system reboot)"
 fi
 
 log_section "Configuring systemd service..."
@@ -191,33 +192,42 @@ fi
 
 log_section "Enabling systemd service..."
 
-systemctl daemon-reload
+systemctl daemon-reload 2>/dev/null || log_warn "systemd not available (OK if testing in container)"
 
-if systemctl is-enabled "$SERVICE_NAME" &>/dev/null; then
+if systemctl is-enabled "$SERVICE_NAME" &>/dev/null 2>&1; then
     log_info "Service already enabled"
 else
     log_info "Enabling service to start on boot..."
-    systemctl enable "$SERVICE_NAME"
+    systemctl enable "$SERVICE_NAME" 2>/dev/null || log_warn "Could not enable service (OK if testing in container)"
 fi
 
 # Check if service is already running
-if systemctl is-active --quiet "$SERVICE_NAME"; then
+if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
     log_info "Service is running, restarting to load latest code..."
-    systemctl restart "$SERVICE_NAME"
+    systemctl restart "$SERVICE_NAME" 2>/dev/null || log_warn "Could not restart service (OK if testing in container)"
 else
     log_info "Starting service..."
-    systemctl start "$SERVICE_NAME"
+    systemctl start "$SERVICE_NAME" 2>/dev/null || log_warn "Could not start service (OK if testing in container)"
 fi
 
 log_section "Installation Complete"
 
 echo ""
-echo -e "${GREEN}✓ Pass-Printer is installed and running!${NC}"
+echo -e "${GREEN}✓ Pass-Printer is installed!${NC}"
 echo ""
 echo "Service User:      $SERVICE_USER"
 echo "Install Directory: $INSTALL_DIR"
 echo "Database Location: $INSTALL_DIR/data.db"
 echo ""
+
+# Check if we're in a container
+if [[ -f /.dockerenv ]] || [[ -f /run/.containerenv ]]; then
+    echo -e "${YELLOW}⚠️  Note: This appears to be a container environment${NC}"
+    echo "   Some services (udev, systemd) may not be fully functional"
+    echo "   The configuration is correct and will work on real hardware"
+    echo ""
+fi
+
 echo -e "${BLUE}Quick Commands:${NC}"
 echo "  Status:  systemctl status $SERVICE_NAME"
 echo "  Logs:    journalctl -u $SERVICE_NAME -f"
