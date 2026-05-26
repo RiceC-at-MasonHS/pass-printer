@@ -1,0 +1,19 @@
+body{
+    width: 1404px; 
+    height: 1872px;
+}
+
+#text-area{
+    height: calc(1872px - 1404px);
+    overflow: hidden;
+}
+
+h1{
+    font-size: 6rem;
+    line-height: 0.4em;
+}
+
+p{
+    font-size: 2rem;
+    line-height: 0.4em;
+}

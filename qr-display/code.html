@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="large.css">
+    <link rel="stylesheet" href="code.css"> 
+    <link rel="stylesheet" href="e-ink.css">
+    <title>show QR code</title>
+</head>
+<body>
+    <div class="container">
+        <div id="text-area">
+            <h1>Daily Late-Arrival Form</h1>
+            <p>QR code to provide a reason for your late arrival.  ~~~~~~~~ Today: {{date}}</p>
+            <hr style="border-top: double 4px black;">
+            <p>
+                The link/code rotates daily. 
+                Do not alter the daily 'key' or else you pass will not print.
+            </p>
+            <p>
+                You may not proceed to class until this form is complete and you have a printed pass.
+            </p>
+            <hr style="border-top: double 4px black;">
+            <p>
+                Once you have the pass: proceed directly to class, and hand the teacher/sub the pass. 
+            </p>
+            <p>
+                The teacher will have recieved an automated Smartpass to indicate your arrival. 
+            </p>
+        </div>
+        <img src="qr_code.png" width="1404px">
+    </div>
+</body>
+</html>

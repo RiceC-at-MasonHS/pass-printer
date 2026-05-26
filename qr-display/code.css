@@ -1,0 +1,14 @@
+.container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Horizontally centers the text box */
+    align-items: center;     /* Vertically centers the text box */
+    align-content: space-between;
+}
+.container p, .container h1{
+    text-align: center;
+}
+
+*{
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}

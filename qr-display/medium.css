@@ -1,0 +1,29 @@
+body{
+    width:480px;
+    height:800px;
+}
+
+#text-area{
+    height: calc(800px - 480px);
+    overflow: hidden;
+}
+
+h1{
+    font-size: 2.5rem;
+    line-height: 0.4em;
+}
+
+p{
+    font-size: 1.1rem;
+    font-weight: 500;
+    line-height: 1.1em;
+    padding-left: 4px;
+    padding-right: 4px;
+    margin-top: 0;
+    /* margin-bottom: 0; */
+}
+
+p+hr{
+    /* margin-top: 0.5em;
+    margin-bottom: 0.5em; */
+}

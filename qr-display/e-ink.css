@@ -1,0 +1,8 @@
+body{
+    filter: grayscale(100%) contrast(1000%);
+    overflow: clip;
+    border: red solid 1px;
+    background-color: white;
+    margin: 0;
+    padding:0;
+}

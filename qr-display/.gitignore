@@ -1,0 +1,5 @@
+# full Python virtual Environment directory
+venv/
+
+# all generated image files
+*.png
