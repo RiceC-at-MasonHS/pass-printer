@@ -11,22 +11,24 @@ function onFormSubmit(e) {
     var lastName     = responses[2].trim();
     var studentName  = firstName + " " + lastName;
     var studentId    = responses[3].trim();
-    var teacherInput = "prototype only"
-    var period       = "prototype only";
     var reason       = responses[5].trim();
 
     var now         = new Date();
     var arrivalTime = Utilities.formatDate(now, Session.getScriptTimeZone(), "h:mm a");
     var arrivalDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "EEEE, MMMM d, yyyy");
     var isoTimestamp = now.toISOString();
+    // print-server will use the ISO timestamp to get the current class-period
+    // `studentId` and `studentName` could be used to lookup location and teacher, if not a FERPA violation
 
-    // Don't print a pass for Early Release
+    // ------------------------------------------------------
+
+    // GUARD_CLAUSE: Don't print a pass for Early Release
     if (responses[4].trim() == "Early dismissal"){
       Logger.log("Early Release: " + studentName + " | Skipping print");
       return
     }
 
-    printHallPass(firstName, lastName, isoTimestamp, reason, teacherInput, period);
+    printHallPass(firstName, lastName, isoTimestamp, reason);
 
     Logger.log("Late arrival processed: " + studentName);
 
@@ -35,17 +37,12 @@ function onFormSubmit(e) {
   }
 }
 
-function printHallPass(firstName, lastName, isoTimestamp, reason, teacher, period) {
+function printHallPass(firstName, lastName, isoTimestamp, reason) {
   var payload = {
     first_name : firstName,
     last_name  : lastName,
     timestamp  : isoTimestamp,
-    late_reason: reason,
-    heading_to : {
-      teacher  : "prototype only",
-      room     : "Attendance",
-      class    : "Period " + period
-    }
+    late_reason: reason
   };
 
   var options = {

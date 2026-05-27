@@ -129,12 +129,10 @@ class PrintQueue:
     
     def _print_pass(self, printer, job):
         """Format and print a pass to the thermal printer."""
-        first = job.data.get("first_name", "")
-        last = job.data.get("last_name", "")
-        timestamp = self._format_timestamp(job.data.get("timestamp", ""))
-        reason = job.data.get("late_reason", "")
-        dest = job.data.get("heading_to", {})
-        teacher = dest.get("teacher", "")
+        first = job.data.get("first_name", "NULL")
+        last = job.data.get("last_name", "NULL")
+        timestamp = self._format_timestamp(job.data.get("timestamp", datetime.datetime.now().isoformat()))
+        reason = job.data.get("late_reason", "none given by student")
 
         # ── Header ──────────────────────────────────────
         printer.set(align="center", bold=True, double_height=True, double_width=True)
@@ -143,29 +141,28 @@ class PrintQueue:
 
         printer.set(align="center", bold=True, double_height=False, double_width=False)
         printer.text("OFFICIAL HALL PASS\n")
-        printer.text("=" * 42 + "\n")
+        printer.text("=" * 24 + "\n")
 
         # ── Student ─────────────────────────────────────
         printer.set(align="left", bold=True, double_height=True, double_width=False)
         printer.text(f"{first} {last}\n")
 
         printer.set(align="left", bold=False, double_height=False)
-        printer.text("-" * 42 + "\n")
-        printer.text(f"Time Out : {timestamp}\n")
-        printer.text(f"Reason   : {reason}\n")
-        printer.text("-" * 42 + "\n")
+        printer.text("-" * 47 + "\n")
+        printer.text(f"Time In: {timestamp}\n")
+        printer.text(f"Reason : {reason}\n")
+        printer.text("-" * 47 + "\n")
 
         # ── Destination ─────────────────────────────────
-        printer.set(bold=True)
-        printer.text("DESTINATION\n")
-        printer.set(bold=False)
-        printer.text(f"Teacher  : {teacher}\n")
+        # removed for prototype
+        # -- should contain the current class-period
+        # -- [if possible] teacher's name and room number
 
         # ── Footer ──────────────────────────────────────
-        printer.text("=" * 42 + "\n")
+        printer.text("=" * 47 + "\n")
         printer.set(align="center")
         printer.text("Proceed directly to class.\n")
-        printer.text("Keep this pass until dismissed.\n\n")
+        printer.text("Hand this pass to the teacher or substitute.\n\n")
 
         printer.cut()
         printer.close()
