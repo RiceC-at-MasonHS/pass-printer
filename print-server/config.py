@@ -20,3 +20,13 @@ PRINT_PASSKEY = os.getenv("PRINT_PASSKEY", "")
 SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("SERVER_PORT", "5000"))
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+
+# ── School Configuration ─────────────────────────────────────────────
+SCHOOL_NAME_LINE_1 = os.getenv("SCHOOL_NAME_LINE_1", "MASON HIGH")
+SCHOOL_NAME_LINE_2 = os.getenv("SCHOOL_NAME_LINE_2", "SCHOOL")
+SERVICE_NAME = os.getenv("SERVICE_NAME", "Mason HS Hall Pass Server")
+TIMEZONE = os.getenv("TIMEZONE", "US/Eastern")
+SCHOOL_START_HOUR = int(os.getenv("SCHOOL_START_HOUR", "7"))
+SCHOOL_START_MINUTE = int(os.getenv("SCHOOL_START_MINUTE", "30"))
+SCHOOL_END_HOUR = int(os.getenv("SCHOOL_END_HOUR", "14"))
+SCHOOL_END_MINUTE = int(os.getenv("SCHOOL_END_MINUTE", "30"))
