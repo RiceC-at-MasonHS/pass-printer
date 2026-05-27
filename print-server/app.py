@@ -1,12 +1,35 @@
 """Flask application for the print server."""
 
 from flask import Flask, jsonify, request
+import os
+from functools import wraps
 
-from config import SERVER_HOST, SERVER_PORT, DEBUG
+from config import SERVER_HOST, SERVER_PORT, DEBUG, PRINT_PASSKEY
 from print_queue import submit_print_job, get_print_job_status, get_print_queue_summary
 
 app = Flask(__name__)
 
+def require_passkey(f):
+    """
+    Decorator that requires a valid passkey in the Authorization header.
+    Format: Authorization: Bearer <passkey>
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not PRINT_PASSKEY:
+            return jsonify({"error": "Print passkey not configured on server"}), 500
+        
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+        
+        provided_passkey = auth_header[7:]  # Strip "Bearer " prefix
+        if provided_passkey != PRINT_PASSKEY:
+            return jsonify({"error": "Invalid passkey"}), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
 
 @app.route("/", methods=["GET"])
 def health():
@@ -15,6 +38,7 @@ def health():
 
 
 @app.route("/print", methods=["POST"])
+@require_passkey
 def print_pass():
     """Submit a print job to the queue."""
     data = request.get_json(silent=True)

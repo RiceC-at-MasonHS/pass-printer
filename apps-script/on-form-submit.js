@@ -1,5 +1,6 @@
 var FLASK_SERVER_URL   = "https://pass-printer-test.comet-tech.org/print";  // replace with your Pi's IP
 var SCHOOL_NAME        = "Mason High School";
+var PRINT_PASSKEY      = "your-super-secret-passkey-here";  // Must match the passkey set in the Flask server
 
 function onFormSubmit(e) {
   try {
@@ -52,6 +53,9 @@ function printHallPass(firstName, lastName, isoTimestamp, reason, teacher, perio
     method      : "post",
     contentType : "application/json",
     payload     : JSON.stringify(payload),
+    headers     : {
+      "Authorization": "Bearer " + PRINT_PASSKEY
+    },
     muteHttpExceptions: true
   };
 
